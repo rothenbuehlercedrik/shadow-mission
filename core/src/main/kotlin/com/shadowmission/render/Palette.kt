@@ -21,6 +21,11 @@ object Palette {
     val guard: Color = Color.valueOf("5d6b7d")
     val guardCap: Color = Color.valueOf("394555")
     val visionCalm: Color = Color.valueOf("f2e394").also { it.a = 0.22f }
+    val visionSuspicious: Color = Color.valueOf("f5b041").also { it.a = 0.24f }
+    val visionSearching: Color = Color.valueOf("ef7d32").also { it.a = 0.28f }
+    val visionAlarmed: Color = Color.valueOf("e8433a").also { it.a = 0.32f }
+    val meterBack: Color = Color.valueOf("000000").also { it.a = 0.5f }
+    val noise: Color = Color.valueOf("9fb4ff").also { it.a = 0.5f }
     val target: Color = Color.valueOf("c9a227")
     val targetMarker: Color = Color.valueOf("d7263d")
     val exit: Color = Color.valueOf("3fbf7f")
@@ -29,5 +34,7 @@ object Palette {
     val blocked: Color = Color.valueOf("ff5a4e")
     val button: Color = Color.valueOf("e8ecf5").also { it.a = 0.12f }
     val buttonActive: Color = Color.valueOf("d7263d").also { it.a = 0.55f }
+    val overlay: Color = Color.valueOf("05070d").also { it.a = 0.72f }
+    val failText: Color = Color.valueOf("ff6b5e")
     val hudText: Color = Color.valueOf("c8cee0")
 }

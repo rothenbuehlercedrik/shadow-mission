@@ -16,17 +16,19 @@ import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.shadowmission.game.Mission
+import com.shadowmission.game.MissionStatus
 import com.shadowmission.game.Position
 import com.shadowmission.level.Level
 
-/** Plays one mission. Milestone 2: move the assassin around the building; guards don't react yet. */
-class MissionScreen(level: Level) : ScreenAdapter() {
+/** Plays one mission: move the assassin, avoid the guards. */
+class MissionScreen(private val level: Level) : ScreenAdapter() {
 
-    val mission = Mission(level)
+    var mission = Mission(level)
+        private set
     private val camera = OrthographicCamera()
     private val viewport = ExtendViewport(VIEW_WIDTH, VIEW_HEIGHT, camera)
     private val cameraController = CameraController(camera, level)
-    private val renderer = LevelRenderer(mission)
+    private var renderer = LevelRenderer(mission)
 
     private val hudViewport = ScreenViewport()
     private val batch = SpriteBatch()
@@ -45,7 +47,18 @@ class MissionScreen(level: Level) : ScreenAdapter() {
         cameraController.centreOn(a.x, a.y + mission.level.floorHeight / 2f)
     }
 
+    private fun restart() {
+        renderer.dispose()
+        mission = Mission(level)
+        renderer = LevelRenderer(mission)
+        cameraController.following = true
+    }
+
     private fun handleTap(screenX: Float, screenY: Float, count: Int) {
+        if (mission.status == MissionStatus.CAUGHT) {
+            restart()
+            return
+        }
         val hudY = Gdx.graphics.height - screenY
         if (crouchCentre.dst(screenX, hudY) <= BUTTON_RADIUS * ui * 1.2f) {
             mission.assassin.crouching = !mission.assassin.crouching
@@ -102,9 +115,33 @@ class MissionScreen(level: Level) : ScreenAdapter() {
         font.color = Palette.hudText
         val pad = 12f * ui
         font.draw(batch, mission.level.name, pad, hudViewport.worldHeight - pad)
-        font.draw(batch, "Tap to walk, double tap to run. Drag to look, pinch to zoom.", pad, hudViewport.worldHeight - pad - font.lineHeight * 1.3f)
+        font.draw(batch, "Tap to walk, double tap to run. Stay out of the guards' sight.", pad, hudViewport.worldHeight - pad - font.lineHeight * 1.3f)
         layout.setText(font, if (crouching) "Stand" else "Crouch")
         font.draw(batch, layout, centre.x - layout.width / 2f, centre.y + layout.height / 2f)
+        batch.end()
+
+        if (mission.status == MissionStatus.CAUGHT) drawCaught()
+    }
+
+    private fun drawCaught() {
+        val w = hudViewport.worldWidth
+        val h = hudViewport.worldHeight
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        hudShapes.begin(ShapeRenderer.ShapeType.Filled)
+        hudShapes.color = Palette.overlay
+        hudShapes.rect(0f, 0f, w, h)
+        hudShapes.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        batch.begin()
+        font.data.setScale(ui * 2f)
+        font.color = Palette.failText
+        layout.setText(font, "You were caught")
+        font.draw(batch, layout, (w - layout.width) / 2f, h / 2f + layout.height * 1.5f)
+        font.data.setScale(ui)
+        font.color = Palette.hudText
+        layout.setText(font, "Tap anywhere to try again")
+        font.draw(batch, layout, (w - layout.width) / 2f, h / 2f - layout.height)
         batch.end()
     }
 

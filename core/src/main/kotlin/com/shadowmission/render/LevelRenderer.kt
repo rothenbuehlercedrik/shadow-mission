@@ -7,11 +7,11 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.Matrix4
 import com.shadowmission.game.Gait
+import com.shadowmission.game.Guard
+import com.shadowmission.game.GuardState
 import com.shadowmission.game.Mission
 import com.shadowmission.game.PathStep
 import com.shadowmission.level.Floor
-import com.shadowmission.level.GuardKind
-import com.shadowmission.level.GuardSpawn
 import com.shadowmission.level.Level
 import com.shadowmission.level.Room
 import com.shadowmission.level.Stairs
@@ -37,10 +37,11 @@ class LevelRenderer(private val mission: Mission) {
         level.floors.forEach(::drawWallsAndDoors)
         drawSlabs()
         drawExit()
-        level.guards.forEach(::drawVisionCone)
-        level.guards.forEach(::drawGuard)
+        mission.guards.forEach(::drawVisionCone)
+        mission.guards.forEach(::drawGuard)
         drawTarget()
         drawPathPreview()
+        drawNoise()
         drawAssassin()
         drawTapMarker(tapMarker)
         shapes.end()
@@ -125,26 +126,45 @@ class LevelRenderer(private val mission: Mission) {
         shapes.triangle(x - 0.3f, y + 2.3f, x + 0.3f, y + 2.3f, x, y + 1.95f)
     }
 
-    private fun drawVisionCone(guard: GuardSpawn) {
-        val y = level.floorY(guard.floor) + EYE_HEIGHT
+    private fun drawVisionCone(guard: Guard) {
+        val y = guard.y + EYE_HEIGHT
         val room = level.roomAt(guard.floor, guard.x)
         val range = if (room?.dark == true) VISION_RANGE_DARK else VISION_RANGE
         // Walls and closed doors block sight; open doorways let it through.
         val endX = mission.building.sightEnd(guard.floor, guard.x, guard.facing, range)
-        shapes.color = Palette.visionCalm
+        shapes.color = when (guard.state) {
+            GuardState.PATROL -> Palette.visionCalm
+            GuardState.SUSPICIOUS -> Palette.visionSuspicious
+            GuardState.SEARCHING -> Palette.visionSearching
+            GuardState.ALARMED -> Palette.visionAlarmed
+        }
         shapes.triangle(guard.x, y, endX, y + 0.9f, endX, y - 1.3f)
     }
 
-    private fun drawGuard(guard: GuardSpawn) {
-        val y = level.floorY(guard.floor)
-        drawPerson(guard.x, y, Palette.guard)
+    private fun drawGuard(guard: Guard) {
+        val x = guard.x
+        val y = guard.y
+        drawPerson(x, y, Palette.guard)
         shapes.color = Palette.guardCap
-        shapes.rect(guard.x - 0.22f, y + BODY_HEIGHT - 0.12f, 0.44f, 0.14f)
-        shapes.rect(guard.x + guard.facing * 0.18f - 0.1f, y + BODY_HEIGHT - 0.12f, 0.2f, 0.06f)
-        if (guard.kind == GuardKind.SENTRY) {
-            shapes.color = Palette.hudText
-            shapes.rect(guard.x - 0.04f, y + BODY_HEIGHT + 0.15f, 0.08f, 0.08f)
+        shapes.rect(x - 0.22f, y + BODY_HEIGHT - 0.12f, 0.44f, 0.14f)
+        shapes.rect(x + guard.facing * 0.18f - 0.1f, y + BODY_HEIGHT - 0.12f, 0.2f, 0.06f)
+        drawAlertIcon(guard, x, y + BODY_HEIGHT + 0.25f)
+    }
+
+    /** An awareness meter that fills up, then a red "!" once the guard is certain. */
+    private fun drawAlertIcon(guard: Guard, x: Float, y: Float) {
+        if (guard.state == GuardState.ALARMED) {
+            shapes.color = Palette.visionAlarmed.cpy().also { it.a = 1f }
+            shapes.rect(x - 0.07f, y + 0.2f, 0.14f, 0.45f)
+            shapes.rect(x - 0.07f, y, 0.14f, 0.13f)
+            return
         }
+        if (guard.awareness <= 0.01f) return
+        shapes.color = Palette.meterBack
+        shapes.rect(x - 0.35f, y, 0.7f, 0.14f)
+        shapes.color = if (guard.state >= GuardState.SEARCHING) Palette.visionSearching.cpy().also { it.a = 1f }
+        else Palette.visionSuspicious.cpy().also { it.a = 1f }
+        shapes.rect(x - 0.35f, y, 0.7f * guard.awareness, 0.14f)
     }
 
     private fun drawTarget() {
@@ -165,6 +185,20 @@ class LevelRenderer(private val mission: Mission) {
         shapes.rect(a.x - 0.25f, a.y + height - 0.55f, 0.5f, 0.14f)
         // The scarf tail trails behind the direction of travel.
         shapes.rect(a.x - a.facing * 0.34f - 0.11f, a.y + height - 0.75f, 0.22f, 0.28f)
+    }
+
+    private fun drawNoise() {
+        val a = mission.assassin
+        val radius = a.noiseRadius
+        if (radius <= 0f) return
+        // Pulsing ring showing how far guards can hear the assassin.
+        val pulse = (mission.time * 2f) % 1f
+        shapes.set(ShapeType.Line)
+        shapes.color = Palette.noise.cpy().also { it.a *= 1f - pulse }
+        shapes.ellipse(a.x - radius * pulse, a.y - 0.2f, radius * 2f * pulse, 0.4f, 24)
+        shapes.color = Palette.noise
+        shapes.ellipse(a.x - radius, a.y - 0.2f, radius * 2f, 0.4f, 32)
+        shapes.set(ShapeType.Filled)
     }
 
     private fun drawPathPreview() {
