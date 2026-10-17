@@ -8,7 +8,7 @@ val natives: Configuration by configurations.creating
 
 android {
     namespace = "com.shadowmission.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.shadowmission.game"
