@@ -1,0 +1,41 @@
+{
+  "name": "Harbor Warehouse (test level)",
+  "floorHeight": 3.2,
+  "floors": [
+    {
+      "rooms": [
+        { "id": "loading-bay", "x": 0, "width": 10 },
+        { "id": "corridor", "x": 10, "width": 8 },
+        { "id": "storage", "x": 18, "width": 12, "dark": true }
+      ],
+      "doors": [ { "x": 10 }, { "x": 18 } ]
+    },
+    {
+      "rooms": [
+        { "id": "office", "x": 0, "width": 8 },
+        { "id": "hall", "x": 8, "width": 12 },
+        { "id": "break-room", "x": 20, "width": 10 }
+      ],
+      "doors": [ { "x": 8 }, { "x": 20 } ]
+    },
+    {
+      "rooms": [
+        { "id": "archive", "x": 0, "width": 12, "dark": true },
+        { "id": "boss-office", "x": 12, "width": 18 }
+      ],
+      "doors": [ { "x": 12, "locked": true } ]
+    }
+  ],
+  "stairs": [
+    { "x": 13.5, "width": 3.5, "bottomFloor": 0 },
+    { "x": 3, "width": 3.5, "bottomFloor": 1 }
+  ],
+  "player": { "floor": 0, "x": 2 },
+  "exit": { "floor": 0, "x": 0.8 },
+  "target": { "floor": 2, "x": 25 },
+  "guards": [
+    { "floor": 0, "x": 22, "kind": "patrol", "route": [19, 29] },
+    { "floor": 1, "x": 11, "kind": "patrol", "route": [9, 19], "facing": -1 },
+    { "floor": 2, "x": 17, "kind": "sentry", "facing": 1 }
+  ]
+}
