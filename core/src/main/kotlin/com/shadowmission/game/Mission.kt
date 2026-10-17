@@ -4,7 +4,7 @@ import com.shadowmission.level.HidingSpot
 import com.shadowmission.level.Level
 import kotlin.math.abs
 
-enum class MissionStatus { PLAYING, CAUGHT }
+enum class MissionStatus { PLAYING, CAUGHT, COMPLETE }
 
 /** What the player last asked the assassin to do. Movement orders finish when the assassin arrives. */
 sealed interface Order {
@@ -29,6 +29,19 @@ class Mission(val level: Level) {
     val nav = NavGraph(building)
     val assassin = Assassin(level, Position(level.player.floor, level.player.x))
     val guards: List<Guard> = level.guards.map { Guard(it, this) }
+    val target = Guard(level.target, this, isTarget = true)
+
+    /** Everyone in the building who can see, hear and be taken down. */
+    val people: List<Guard> = guards + target
+
+    /** Someone saw the assassin clearly at least once. Costs a star. */
+    var detected = false
+        private set
+
+    /** Guards (not the target) knocked out. Each one costs the clean-kill star. */
+    val extraTakedowns: Int get() = guards.count { it.down }
+
+    val targetEliminated: Boolean get() = target.down
 
     var status = MissionStatus.PLAYING
         private set
@@ -88,7 +101,28 @@ class Mission(val level: Level) {
         followOrder(delta)
         emitNoise(delta)
         updateCoins(delta)
-        guards.forEach { it.update(delta) }
+        people.forEach { it.update(delta) }
+        checkExit()
+    }
+
+    /** 1 star for finishing, 1 for never being seen, 1 for leaving everyone but the target alone. */
+    fun stars(): Int {
+        if (status != MissionStatus.COMPLETE) return 0
+        return 1 + (if (!detected) 1 else 0) + (if (extraTakedowns == 0) 1 else 0)
+    }
+
+    fun spotted() {
+        detected = true
+    }
+
+    private fun checkExit() {
+        val a = assassin
+        if (!targetEliminated || a.mover.isOnStairs || a.dragging != null) return
+        if (a.floor == level.exit.floor && abs(a.x - level.exit.x) <= EXIT_REACH) {
+            status = MissionStatus.COMPLETE
+            assassin.stop()
+            order = null
+        }
     }
 
     /** Opens any door a character walked through. */
@@ -162,8 +196,8 @@ class Mission(val level: Level) {
                 } else if (g.floor == a.floor && !g.mover.isOnStairs && abs(g.x - a.x) <= TAKEDOWN_REACH) {
                     order = null
                     a.stop()
-                    // An alarmed guard is ready for it; anyone else goes down.
-                    if (g.state != GuardState.ALARMED) {
+                    // An alarmed guard is ready for it; anyone else, and always the target, goes down.
+                    if (g.isTarget || g.state != GuardState.ALARMED) {
                         g.knockOut()
                         a.busy = TAKEDOWN_TIME
                         noise(Position(a.floor, a.x), TAKEDOWN_NOISE)
@@ -224,7 +258,7 @@ class Mission(val level: Level) {
     }
 
     private fun noise(at: Position, radius: Float) {
-        guards.filter { !it.down && it.floor == at.floor && abs(it.x - at.x) <= radius }.forEach { it.hear(at) }
+        people.filter { !it.down && it.floor == at.floor && abs(it.x - at.x) <= radius }.forEach { it.hear(at) }
     }
 
     companion object {
@@ -242,5 +276,6 @@ class Mission(val level: Level) {
         const val COIN_RANGE = 9f
         const val COIN_NOISE = 5f
         const val REPLAN_TIME = 0.3f
+        const val EXIT_REACH = 0.7f
     }
 }

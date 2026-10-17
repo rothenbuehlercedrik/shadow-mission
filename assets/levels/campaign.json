@@ -1,0 +1,5 @@
+{
+  "missions": [
+    { "id": "test_warehouse", "file": "levels/test_warehouse.json", "district": "Harbor" }
+  ]
+}

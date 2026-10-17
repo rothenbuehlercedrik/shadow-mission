@@ -14,7 +14,12 @@ enum class GuardState { PATROL, SUSPICIOUS, SEARCHING, ALARMED }
  * Awareness fills while the assassin is in sight; crossing thresholds raises the alert state,
  * and losing contact lets it fall back one step at a time.
  */
-class Guard(val spawn: GuardSpawn, private val mission: Mission) {
+class Guard(
+    val spawn: GuardSpawn,
+    private val mission: Mission,
+    /** The mission's target: behaves like a guard but flees instead of fighting. */
+    val isTarget: Boolean = false,
+) {
 
     val mover = Mover(mission.level, Position(spawn.floor, spawn.x)).also { it.facing = spawn.facing }
 
@@ -122,6 +127,7 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
         when {
             awareness >= 1f && state != GuardState.ALARMED -> {
                 enter(GuardState.ALARMED)
+                mission.spotted()
                 mission.raiseAlarm(this, Position(mission.assassin.floor, mission.assassin.x))
             }
             seesAssassin && awareness >= SEARCH_LEVEL && state < GuardState.SEARCHING -> enter(GuardState.SEARCHING)
@@ -131,7 +137,7 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
 
     private fun noticeBodies() {
         if (state == GuardState.ALARMED) return
-        val body = mission.guards.firstOrNull { it.down && !it.discovered && it.hiddenIn == null && mission.assassin.dragging !== it && mission.canSee(this, it.floor, it.x, it.y) }
+        val body = mission.people.firstOrNull { it.down && !it.discovered && it.hiddenIn == null && mission.assassin.dragging !== it && mission.canSee(this, it.floor, it.x, it.y) }
             ?: return
         body.discovered = true
         enter(GuardState.SEARCHING)
@@ -211,6 +217,10 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
 
     private fun chase(delta: Float) {
         val a = mission.assassin
+        if (isTarget) {
+            flee(delta)
+            return
+        }
         if (seesAssassin) {
             stateTimer = 0f
             if (a.floor == floor && !a.mover.isOnStairs && abs(a.x - x) < CATCH_DISTANCE) {
@@ -228,6 +238,20 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
         if (!mover.isMoving) pointOfInterest?.let { if (abs(it.x - x) > 0.1f || it.floor != floor) goTo(it) }
         if (stateTimer >= LOSE_TRACK_TIME) {
             // Lost them: keep searching, but no longer certain.
+            enter(GuardState.SEARCHING)
+            awareness = SEARCH_LEVEL
+        }
+    }
+
+    /** The target runs to the far end of the floor, away from the assassin, and stays there scared. */
+    private fun flee(delta: Float) {
+        if (seesAssassin) stateTimer = 0f else stateTimer += delta
+        if (!mover.isMoving && seesAssassin) {
+            val f = mission.level.floors[floor]
+            val away = if (mission.assassin.x < x) f.right - 0.5f else f.left + 0.5f
+            if (abs(away - x) > 0.5f) goTo(Position(floor, away))
+        }
+        if (stateTimer >= LOSE_TRACK_TIME) {
             enter(GuardState.SEARCHING)
             awareness = SEARCH_LEVEL
         }

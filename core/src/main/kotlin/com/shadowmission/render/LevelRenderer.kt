@@ -42,11 +42,10 @@ class LevelRenderer(private val mission: Mission) {
         drawSlabs()
         drawExit()
         level.hidingSpots.forEach(::drawHidingSpot)
-        mission.guards.filter { !it.down }.forEach(::drawVisionCone)
-        mission.guards.filter { it.down && it.hiddenIn == null }.forEach(::drawBody)
-        mission.guards.filter { !it.down }.forEach(::drawGuard)
+        mission.people.filter { !it.down }.forEach(::drawVisionCone)
+        mission.people.filter { it.down && it.hiddenIn == null }.forEach(::drawBody)
+        mission.people.filter { !it.down }.forEach(::drawGuard)
         drawTakedownMarker()
-        drawTarget()
         drawPathPreview()
         drawNoise()
         drawAssassin()
@@ -129,9 +128,16 @@ class LevelRenderer(private val mission: Mission) {
     private fun drawExit() {
         val x = level.exit.x
         val y = level.floorY(level.exit.floor)
-        shapes.color = Palette.exit
+        // Once the target is down the exit lights up and pulses.
+        val ready = mission.targetEliminated
+        val bob = if (ready) kotlin.math.sin(mission.time * 5f) * 0.12f else 0f
+        shapes.color = if (ready) Palette.exit else Palette.exit.cpy().also { it.a = 0.45f }
         shapes.rect(x - 0.45f, y, 0.9f, 0.08f)
-        shapes.triangle(x - 0.3f, y + 2.3f, x + 0.3f, y + 2.3f, x, y + 1.95f)
+        shapes.triangle(x - 0.3f, y + 2.3f + bob, x + 0.3f, y + 2.3f + bob, x, y + 1.95f + bob)
+        if (ready) {
+            shapes.color = Palette.exit.cpy().also { it.a = 0.15f }
+            shapes.rect(x - 0.45f, y, 0.9f, 2.2f)
+        }
     }
 
     private fun drawVisionCone(guard: Guard) {
@@ -152,10 +158,19 @@ class LevelRenderer(private val mission: Mission) {
     private fun drawGuard(guard: Guard) {
         val x = guard.x
         val y = guard.y
-        drawPerson(x, y, Palette.guard)
-        shapes.color = Palette.guardCap
-        shapes.rect(x - 0.22f, y + BODY_HEIGHT - 0.12f, 0.44f, 0.14f)
-        shapes.rect(x + guard.facing * 0.18f - 0.1f, y + BODY_HEIGHT - 0.12f, 0.2f, 0.06f)
+        if (guard.isTarget) {
+            drawPerson(x, y, Palette.target)
+            shapes.color = Palette.targetTie
+            shapes.rect(x - 0.05f, y + BODY_HEIGHT - 0.9f, 0.1f, 0.45f)
+            shapes.color = Palette.targetMarker
+            val top = y + BODY_HEIGHT + if (guard.awareness > 0.01f || guard.state == GuardState.ALARMED) 1.05f else 0.2f
+            shapes.triangle(x - 0.25f, top + 0.35f, x + 0.25f, top + 0.35f, x, top)
+        } else {
+            drawPerson(x, y, Palette.guard)
+            shapes.color = Palette.guardCap
+            shapes.rect(x - 0.22f, y + BODY_HEIGHT - 0.12f, 0.44f, 0.14f)
+            shapes.rect(x + guard.facing * 0.18f - 0.1f, y + BODY_HEIGHT - 0.12f, 0.2f, 0.06f)
+        }
         drawAlertIcon(guard, x, y + BODY_HEIGHT + 0.25f)
     }
 
@@ -173,14 +188,6 @@ class LevelRenderer(private val mission: Mission) {
         shapes.color = if (guard.state >= GuardState.SEARCHING) Palette.visionSearching.cpy().also { it.a = 1f }
         else Palette.visionSuspicious.cpy().also { it.a = 1f }
         shapes.rect(x - 0.35f, y, 0.7f * guard.awareness, 0.14f)
-    }
-
-    private fun drawTarget() {
-        val x = level.target.x
-        val y = level.floorY(level.target.floor)
-        drawPerson(x, y, Palette.target)
-        shapes.color = Palette.targetMarker
-        shapes.triangle(x - 0.25f, y + BODY_HEIGHT + 0.55f, x + 0.25f, y + BODY_HEIGHT + 0.55f, x, y + BODY_HEIGHT + 0.2f)
     }
 
     private fun drawAssassin() {
@@ -234,7 +241,7 @@ class LevelRenderer(private val mission: Mission) {
     }
 
     private fun drawBody(guard: Guard) {
-        shapes.color = Palette.guard
+        shapes.color = if (guard.isTarget) Palette.target else Palette.guard
         val dir = if (mission.assassin.dragging === guard) -mission.assassin.facing else guard.facing
         shapes.rect(guard.x - 0.8f, guard.y, 1.4f, 0.32f)
         shapes.circle(guard.x + dir * 0.75f, guard.y + 0.18f, 0.18f, 12)

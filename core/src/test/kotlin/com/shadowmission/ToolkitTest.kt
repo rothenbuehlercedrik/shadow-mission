@@ -30,7 +30,7 @@ class ToolkitTest {
         stairs = emptyList(),
         player = Spawn(0, player),
         guards = guards,
-        target = Spawn(0, 29f),
+        target = GuardSpawn(0, 29f, GuardKind.SENTRY),
         exit = Spawn(0, 1f),
         hidingSpots = listOf(HidingSpot(0, 4f, HidingKind.CLOSET)),
         coins = 2,

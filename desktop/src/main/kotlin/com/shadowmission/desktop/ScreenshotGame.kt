@@ -11,20 +11,32 @@ import com.shadowmission.render.MissionScreen
 
 /**
  * Renders a few frames, saves a PNG of the screen and quits. Used to check visuals without a phone.
- * With [walkTo], the assassin is sent there and the mission runs [seconds] of game time first.
+ * With [mission], that mission opens instead of the menu; [walkTo] sends the assassin somewhere and
+ * the mission runs [seconds] of game time first.
  */
 class ScreenshotGame(
     private val outputPath: String,
+    mission: Int? = null,
     private val walkTo: Position? = null,
     private val run: Boolean = false,
     private val seconds: Float = 0f,
-) : ShadowMissionGame() {
+    /** "caught" or "complete" to jump straight to that end card. */
+    private val end: String? = null,
+) : ShadowMissionGame(mission) {
     private var frames = 0
 
     override fun render() {
-        if (frames == 0 && walkTo != null) {
-            val mission = (screen as MissionScreen).mission
-            mission.moveAssassin(walkTo, run)
+        val missionScreen = screen as? MissionScreen
+        if (frames == 0 && missionScreen != null) {
+            val mission = missionScreen.mission
+            walkTo?.let { mission.moveAssassin(it, run) }
+            when (end) {
+                "caught" -> mission.caught()
+                "complete" -> {
+                    mission.target.knockOut()
+                    mission.moveAssassin(Position(mission.level.exit.floor, mission.level.exit.x), run = false)
+                }
+            }
             repeat((seconds * 60).toInt()) { mission.update(1f / 60f) }
         }
         super.render()

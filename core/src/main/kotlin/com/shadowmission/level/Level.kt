@@ -11,11 +11,14 @@ data class Level(
     val stairs: List<Stairs>,
     val player: Spawn,
     val guards: List<GuardSpawn>,
-    val target: Spawn,
+    /** The person to eliminate. Moves like a guard (route or standing post) but never fights back. */
+    val target: GuardSpawn,
     val exit: Spawn,
     val hidingSpots: List<HidingSpot> = emptyList(),
     /** Coins the assassin starts with, for distractions. */
     val coins: Int = 3,
+    /** One or two sentences shown before the mission starts. */
+    val briefing: String = "",
 ) {
     val left: Float get() = floors.minOf { it.left }
     val right: Float get() = floors.maxOf { it.right }

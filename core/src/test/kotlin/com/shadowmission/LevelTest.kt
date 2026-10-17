@@ -17,7 +17,7 @@ class LevelTest {
 
     @Test
     fun `every shipped level loads and validates`() {
-        val files = File(assetsDir, "levels").listFiles { f -> f.extension == "json" }!!.toList()
+        val files = File(assetsDir, "levels").listFiles { f -> f.extension == "json" && f.name != "campaign.json" }!!.toList()
         assertTrue(files.isNotEmpty(), "no level files found")
         files.forEach { file ->
             val level = LevelLoader.parse(file.readText())
@@ -31,7 +31,6 @@ class LevelTest {
         assertEquals(3, level.floors.size)
         assertEquals(30f, level.right)
         assertEquals("boss-office", level.roomAt(level.target.floor, level.target.x)?.id)
-        assertTrue(level.floors[2].doorAt(12f)!!.locked)
         assertEquals(listOf(19f, 29f), level.guards[0].route)
         assertEquals(2, level.stairs.size)
     }

@@ -49,9 +49,13 @@ class MovementTest {
 
     @Test
     fun `a locked door blocks the way`() {
-        // The boss office door is locked, and both staircases land outside it.
-        assertNull(nav().findPath(Position(0, 2f), Position(2, 25f)))
-        assertEquals(nav().areaOf(2, 5f) + 1, nav().areaOf(2, 25f))
+        assertNotNull(nav().findPath(Position(0, 2f), Position(2, 25f)))
+        // Lock the boss office door: both staircases land outside it, so there is no way in.
+        val top = level.floors[2]
+        val locked = level.copy(floors = level.floors.dropLast(1) + top.copy(doors = top.doors.map { it.copy(locked = true) }))
+        val lockedNav = NavGraph(Building(locked))
+        assertNull(lockedNav.findPath(Position(0, 2f), Position(2, 25f)))
+        assertEquals(lockedNav.areaOf(2, 5f) + 1, lockedNav.areaOf(2, 25f))
     }
 
     @Test
@@ -95,8 +99,9 @@ class MovementTest {
 
     @Test
     fun `locked doors never open`() {
-        val building = Building(level)
-        val locked = level.floors[2].doorAt(12f)!!
+        val locked = level.floors[2].doorAt(12f)!!.copy(locked = true)
+        val top = level.floors[2]
+        val building = Building(level.copy(floors = level.floors.dropLast(1) + top.copy(doors = listOf(locked))))
         building.open(locked)
         assertFalse(building.isOpen(locked))
     }

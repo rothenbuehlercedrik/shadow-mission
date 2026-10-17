@@ -34,6 +34,7 @@ object Palette {
     val coin: Color = Color.valueOf("f2c94c")
     val slowMo: Color = Color.valueOf("3d5afe").also { it.a = 0.10f }
     val target: Color = Color.valueOf("c9a227")
+    val targetTie: Color = Color.valueOf("7a1f2b")
     val targetMarker: Color = Color.valueOf("d7263d")
     val exit: Color = Color.valueOf("3fbf7f")
     val path: Color = Color.valueOf("e8ecf5").also { it.a = 0.55f }
@@ -43,5 +44,12 @@ object Palette {
     val buttonActive: Color = Color.valueOf("d7263d").also { it.a = 0.55f }
     val overlay: Color = Color.valueOf("05070d").also { it.a = 0.72f }
     val failText: Color = Color.valueOf("ff6b5e")
+    val starOn: Color = Color.valueOf("f2c94c")
+    val starOff: Color = Color.valueOf("3a4058")
+    val panel: Color = Color.valueOf("151c30")
+    val panelLight: Color = Color.valueOf("26304d")
+    val buttonPrimary: Color = Color.valueOf("b51f33")
+    val successText: Color = Color.valueOf("7ee2a8")
+    val mutedText: Color = Color.valueOf("7d869e")
     val hudText: Color = Color.valueOf("c8cee0")
 }

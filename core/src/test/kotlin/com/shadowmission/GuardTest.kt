@@ -30,7 +30,7 @@ class GuardTest {
         stairs = listOf(Stairs(16f, 3f, 0)),
         player = player,
         guards = guards,
-        target = Spawn(1, 10f),
+        target = GuardSpawn(1, 19f, GuardKind.SENTRY),
         exit = Spawn(0, 1f),
     )
 

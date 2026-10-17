@@ -17,12 +17,13 @@ object LevelLoader {
             } ?: emptyList(),
             player = parseSpawn(root.get("player")),
             guards = root.get("guards")?.map(::parseGuard) ?: emptyList(),
-            target = parseSpawn(root.get("target")),
+            target = parseGuard(root.get("target")),
             exit = parseSpawn(root.get("exit")),
             hidingSpots = root.get("hidingSpots")?.map {
                 HidingSpot(it.getInt("floor"), it.getFloat("x"), HidingKind.valueOf(it.getString("kind", "closet").uppercase()))
             } ?: emptyList(),
             coins = root.getInt("coins", 3),
+            briefing = root.getString("briefing", ""),
         )
     }
 
@@ -39,7 +40,7 @@ object LevelLoader {
     private fun parseGuard(json: JsonValue) = GuardSpawn(
         floor = json.getInt("floor"),
         x = json.getFloat("x"),
-        kind = GuardKind.valueOf(json.getString("kind", "patrol").uppercase()),
+        kind = GuardKind.valueOf(json.getString("kind", if (json.has("route")) "patrol" else "sentry").uppercase()),
         route = json.get("route")?.asFloatArray()?.toList() ?: emptyList(),
         facing = json.getInt("facing", 1),
     )

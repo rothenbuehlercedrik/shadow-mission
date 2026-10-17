@@ -29,7 +29,10 @@ object LevelValidator {
             if (level.roomAt(spawn.floor, spawn.x) == null) errors += "$label is outside every room"
         }
         checkSpawn("player", level.player)
-        checkSpawn("target", level.target)
+        checkSpawn("target", Spawn(level.target.floor, level.target.x))
+        level.target.route.forEach { x ->
+            if (level.roomAt(level.target.floor, x) == null) errors += "target route point $x is outside every room"
+        }
         checkSpawn("exit", level.exit)
         level.hidingSpots.forEachIndexed { i, spot -> checkSpawn("hiding spot $i", Spawn(spot.floor, spot.x)) }
         level.guards.forEachIndexed { i, guard ->

@@ -23,7 +23,7 @@
         { "id": "archive", "x": 0, "width": 12, "dark": true },
         { "id": "boss-office", "x": 12, "width": 18 }
       ],
-      "doors": [ { "x": 12, "locked": true } ]
+      "doors": [ { "x": 12 } ]
     }
   ],
   "stairs": [
@@ -32,7 +32,7 @@
   ],
   "player": { "floor": 0, "x": 2 },
   "exit": { "floor": 0, "x": 0.8 },
-  "target": { "floor": 2, "x": 25 },
+  "target": { "floor": 2, "x": 25, "route": [21, 28] },
   "hidingSpots": [
     { "floor": 0, "x": 7.5, "kind": "closet" },
     { "floor": 0, "x": 16.5, "kind": "desk" },
