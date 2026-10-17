@@ -104,7 +104,12 @@ class MissionScreen(
         }
     }
 
+    override fun hide() {
+        game.sounds.stopAmbient()
+    }
+
     override fun show() {
+        game.sounds.startAmbient()
         cameraController.onTap = ::handleTap
         Gdx.input.inputProcessor = InputMultiplexer(holdInput, GestureDetector(cameraController), cameraController.scrollInput)
         viewport.update(Gdx.graphics.width, Gdx.graphics.height)
@@ -119,6 +124,7 @@ class MissionScreen(
         aimingCoin = false
         resultSaved = false
         cameraController.following = true
+        game.sounds.startAmbient()
     }
 
     private val hasNext: Boolean get() = missionIndex + 1 < game.campaign.missions.size
@@ -204,6 +210,9 @@ class MissionScreen(
     override fun render(delta: Float) {
         val dt = minOf(delta, MAX_STEP) * if (slowMotion) SLOW_MOTION_SCALE else 1f
         if (!showingBriefing) mission.update(dt)
+        mission.events.forEach(game.sounds::play)
+        mission.events.clear()
+        if (mission.status != MissionStatus.PLAYING) game.sounds.stopAmbient()
         if (mission.status == MissionStatus.COMPLETE && !resultSaved) {
             resultSaved = true
             game.progress.record(game.campaign.missions[missionIndex].id, mission.stars())
@@ -243,7 +252,8 @@ class MissionScreen(
         font.color = Palette.hudText
         val pad = 12f * ui
         font.draw(batch, mission.level.name, pad, h - pad)
-        font.draw(batch, hint(), pad, h - pad - font.lineHeight * 1.3f)
+        // Leave room for the menu button on the right; long hints wrap onto a second line.
+        font.draw(batch, hint(), pad, h - pad - font.lineHeight * 1.3f, w - pad * 2f - 90f * ui, com.badlogic.gdx.utils.Align.left, true)
         buttons.forEach {
             layout.setText(font, it.label)
             font.draw(batch, layout, it.x - layout.width / 2f, it.y + layout.height / 2f)
@@ -259,7 +269,9 @@ class MissionScreen(
 
     private fun hint(): String {
         val a = mission.assassin
+        val tip = level.tips.firstOrNull { it.floor == a.floor && a.x >= it.fromX && a.x < it.toX }
         return when {
+            tip != null && !mission.targetEliminated && a.dragging == null && !aimingCoin -> tip.text
             !mission.targetEliminated && mission.assassin.dragging == null && !aimingCoin && a.hiddenIn == null && !slowMotion ->
                 "Find the target (gold) and take them down. Tap a guard from behind to knock them out."
             mission.targetEliminated && mission.assassin.dragging == null && !aimingCoin && !slowMotion ->

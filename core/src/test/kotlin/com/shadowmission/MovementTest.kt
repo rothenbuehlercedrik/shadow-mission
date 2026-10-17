@@ -19,7 +19,7 @@ class MovementTest {
 
     // Guards are left out here so they cannot interfere; GuardTest covers them.
     private val level: Level =
-        LevelLoader.parse(File(System.getProperty("assetsDir"), "levels/test_warehouse.json").readText())
+        LevelLoader.parse(File(System.getProperty("assetsDir"), "levels/harbor_warehouse.json").readText())
             .copy(guards = emptyList())
 
     private fun nav() = NavGraph(Building(level))

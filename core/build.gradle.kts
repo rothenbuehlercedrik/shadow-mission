@@ -25,4 +25,7 @@ tasks.test {
     useJUnitPlatform()
     // Tests load the real level files from the shared assets folder.
     systemProperty("assetsDir", rootProject.file("assets").absolutePath)
+    // `./gradlew test -Ptrace` prints guard state changes during playthrough tests.
+    if (project.hasProperty("trace")) systemProperty("trace", "1")
+    testLogging.showStandardStreams = project.hasProperty("trace")
 }

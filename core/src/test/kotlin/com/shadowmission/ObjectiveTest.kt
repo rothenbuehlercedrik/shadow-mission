@@ -3,7 +3,9 @@ package com.shadowmission
 import com.shadowmission.campaign.Campaign
 import com.shadowmission.campaign.CampaignEntry
 import com.shadowmission.campaign.InMemoryProgress
+import com.shadowmission.game.Building
 import com.shadowmission.game.Mission
+import com.shadowmission.game.NavGraph
 import com.shadowmission.game.MissionStatus
 import com.shadowmission.game.Position
 import com.shadowmission.level.Floor
@@ -18,6 +20,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ObjectiveTest {
@@ -115,6 +118,11 @@ class ObjectiveTest {
         campaign.missions.forEach { entry ->
             val level = LevelLoader.parse(File(assets, entry.file).readText())
             assertEquals(emptyList(), LevelValidator.validate(level), entry.file)
+            val nav = NavGraph(Building(level))
+            val start = Position(level.player.floor, level.player.x)
+            val target = Position(level.target.floor, level.target.x)
+            assertNotNull(nav.findPath(start, target), "${entry.file}: no way to the target")
+            assertNotNull(nav.findPath(target, Position(level.exit.floor, level.exit.x)), "${entry.file}: no way to the exit")
         }
     }
 }

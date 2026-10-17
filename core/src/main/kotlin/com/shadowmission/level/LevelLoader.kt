@@ -24,6 +24,9 @@ object LevelLoader {
             } ?: emptyList(),
             coins = root.getInt("coins", 3),
             briefing = root.getString("briefing", ""),
+            tips = root.get("tips")?.map {
+                Tip(it.getInt("floor"), it.getFloat("fromX"), it.getFloat("toX"), it.getString("text"))
+            } ?: emptyList(),
         )
     }
 
@@ -43,5 +46,6 @@ object LevelLoader {
         kind = GuardKind.valueOf(json.getString("kind", if (json.has("route")) "patrol" else "sentry").uppercase()),
         route = json.get("route")?.asFloatArray()?.toList() ?: emptyList(),
         facing = json.getInt("facing", 1),
+        turnEvery = json.getFloat("turnEvery", 5f),
     )
 }

@@ -1,0 +1,44 @@
+{
+  "name": "First Contract",
+  "briefing": "Varga, a smuggler, runs his business from the old boathouse. Slip in, take him down quietly and leave the way you came.",
+  "floorHeight": 3.2,
+  "floors": [
+    {
+      "rooms": [
+        { "id": "entrance", "x": 0, "width": 8 },
+        { "id": "crates", "x": 8, "width": 10 },
+        { "id": "workshop", "x": 18, "width": 10 }
+      ],
+      "doors": [ { "x": 8 }, { "x": 18 } ]
+    },
+    {
+      "rooms": [
+        { "id": "loft", "x": 0, "width": 14, "dark": true },
+        { "id": "office", "x": 14, "width": 14 }
+      ],
+      "doors": [ { "x": 14 } ]
+    }
+  ],
+  "stairs": [
+    { "x": 3, "width": 3.5, "bottomFloor": 0 },
+    { "x": 20.5, "width": 3.5, "bottomFloor": 0 }
+  ],
+  "player": { "floor": 0, "x": 1.5 },
+  "exit": { "floor": 0, "x": 0.8 },
+  "target": { "floor": 1, "x": 20, "kind": "sentry", "facing": 1, "turnEvery": 0 },
+  "guards": [
+    { "floor": 0, "x": 16, "kind": "patrol", "route": [16.5, 9.5] }
+  ],
+  "hidingSpots": [
+    { "floor": 0, "x": 10.5, "kind": "closet" },
+    { "floor": 0, "x": 26, "kind": "desk" },
+    { "floor": 1, "x": 10, "kind": "closet" }
+  ],
+  "coins": 2,
+  "tips": [
+    { "floor": 0, "fromX": 0, "toX": 7.6, "text": "Tap where you want to go; double tap to run, but guards hear running. The stairs here lead up to a dark loft." },
+    { "floor": 0, "fromX": 7.6, "toX": 18, "text": "Watch the guard's cone. Hide in the closet as he passes, or sneak up behind him and tap him to knock him out." },
+    { "floor": 1, "fromX": 0, "toX": 14, "text": "Dark rooms hide you. Tap Crouch to move silently, then open the door to the office." },
+    { "floor": 1, "fromX": 14, "toX": 28, "text": "The man in gold is Varga. Come up behind him and tap him. Then get back to the green exit." }
+  ]
+}

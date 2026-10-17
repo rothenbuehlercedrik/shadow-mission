@@ -1,5 +1,7 @@
 {
   "missions": [
-    { "id": "test_warehouse", "file": "levels/test_warehouse.json", "district": "Harbor" }
+    { "id": "harbor_first_contract", "file": "levels/harbor_first_contract.json", "district": "Harbor · Tutorial" },
+    { "id": "harbor_pier9", "file": "levels/harbor_pier9.json", "district": "Harbor" },
+    { "id": "harbor_warehouse", "file": "levels/harbor_warehouse.json", "district": "Harbor" }
   ]
 }

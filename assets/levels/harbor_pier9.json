@@ -1,0 +1,55 @@
+{
+  "name": "Pier 9 Night Shift",
+  "briefing": "Customs officer Hale sells inspection stamps to the highest bidder. He works upstairs at Pier 9, and his bodyguard watches the left half of the office. Strike when Hale walks to the far side, then escape down the rope off the balcony.",
+  "floorHeight": 3.2,
+  "floors": [
+    {
+      "rooms": [
+        { "id": "gate", "x": 0, "width": 6 },
+        { "id": "yard", "x": 6, "width": 16 },
+        { "id": "cold-store", "x": 22, "width": 12, "dark": true }
+      ],
+      "doors": [ { "x": 6 }, { "x": 22 } ]
+    },
+    {
+      "rooms": [
+        { "id": "catwalk", "x": 0, "width": 14 },
+        { "id": "break-room", "x": 14, "width": 10 },
+        { "id": "records", "x": 24, "width": 10, "dark": true }
+      ],
+      "doors": [ { "x": 14 }, { "x": 24 } ]
+    },
+    {
+      "rooms": [
+        { "id": "storage", "x": 0, "width": 12, "dark": true },
+        { "id": "office", "x": 12, "width": 18 },
+        { "id": "balcony", "x": 30, "width": 4 }
+      ],
+      "doors": [ { "x": 12 }, { "x": 30 } ]
+    }
+  ],
+  "stairs": [
+    { "x": 8.5, "width": 3.5, "bottomFloor": 0 },
+    { "x": 27, "width": 3.5, "bottomFloor": 1 }
+  ],
+  "player": { "floor": 0, "x": 1.5 },
+  "exit": { "floor": 2, "x": 33 },
+  "target": { "floor": 2, "x": 20, "kind": "patrol", "route": [14.5, 25] },
+  "guards": [
+    { "floor": 0, "x": 15, "kind": "patrol", "route": [11.5, 21] },
+    { "floor": 1, "x": 18, "kind": "patrol", "route": [15, 23] },
+    { "floor": 1, "x": 32, "kind": "sentry", "facing": 1, "turnEvery": 6 },
+    { "floor": 2, "x": 13, "kind": "sentry", "facing": 1, "turnEvery": 0 }
+  ],
+  "hidingSpots": [
+    { "floor": 0, "x": 4, "kind": "closet" },
+    { "floor": 0, "x": 18, "kind": "desk" },
+    { "floor": 1, "x": 19.5, "kind": "curtain" },
+    { "floor": 1, "x": 25.8, "kind": "desk" },
+    { "floor": 2, "x": 26.5, "kind": "closet" }
+  ],
+  "coins": 3,
+  "tips": [
+    { "floor": 2, "fromX": 20, "toX": 30, "text": "The bodyguard can't see past the middle of the office. Hide in the closet and strike when Hale turns back." }
+  ]
+}

@@ -27,7 +27,7 @@ class LevelTest {
 
     @Test
     fun `test level is parsed with its rooms, stairs and guards`() {
-        val level = LevelLoader.parse(File(assetsDir, "levels/test_warehouse.json").readText())
+        val level = LevelLoader.parse(File(assetsDir, "levels/harbor_warehouse.json").readText())
         assertEquals(3, level.floors.size)
         assertEquals(30f, level.right)
         assertEquals("boss-office", level.roomAt(level.target.floor, level.target.x)?.id)

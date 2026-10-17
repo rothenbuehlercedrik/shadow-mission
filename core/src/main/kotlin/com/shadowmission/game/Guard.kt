@@ -59,6 +59,9 @@ class Guard(
     private var replanTimer = 0f
     private var poiVisited = false
 
+    /** A beat between hearing something and turning towards it. */
+    private var reactTimer = 0f
+
     private val speed: Float
         get() = when (state) {
             GuardState.PATROL -> PATROL_SPEED
@@ -82,6 +85,11 @@ class Guard(
         if (down) return
         perceive(delta)
         noticeBodies()
+        if (reactTimer > 0f && state == GuardState.SUSPICIOUS) {
+            reactTimer -= delta
+            mover.update(delta, speed) { f, from, to -> mission.walkedThrough(f, from, to) }
+            return
+        }
         when (state) {
             GuardState.PATROL -> patrol(delta)
             GuardState.SUSPICIOUS -> investigate(delta, giveUpAfter = SUSPICIOUS_TIME, calmTo = GuardState.PATROL)
@@ -94,6 +102,10 @@ class Guard(
     /** A noise at [at] reached this guard. */
     fun hear(at: Position) {
         if (state >= GuardState.SEARCHING) return
+        if (state == GuardState.PATROL) {
+            reactTimer = REACTION_TIME
+            mover.stop()
+        }
         enter(GuardState.SUSPICIOUS)
         setPointOfInterest(at)
         awareness = maxOf(awareness, SUSPICIOUS_LEVEL)
@@ -140,6 +152,7 @@ class Guard(
         val body = mission.people.firstOrNull { it.down && !it.discovered && it.hiddenIn == null && mission.assassin.dragging !== it && mission.canSee(this, it.floor, it.x, it.y) }
             ?: return
         body.discovered = true
+        mission.emit(GameEvent.BODY_FOUND)
         enter(GuardState.SEARCHING)
         awareness = maxOf(awareness, SEARCH_LEVEL)
         setPointOfInterest(Position(body.floor, body.x))
@@ -152,6 +165,9 @@ class Guard(
     }
 
     private fun enter(newState: GuardState) {
+        if (newState > state) {
+            mission.emit(if (newState == GuardState.ALARMED) GameEvent.GUARD_ALARMED else GameEvent.GUARD_SUSPICIOUS)
+        }
         state = newState
         stateTimer = 0f
         lookTimer = 0f
@@ -166,8 +182,12 @@ class Guard(
                 return
             }
             // Sentries stand still and slowly look one way, then the other.
+            if (spawn.turnEvery <= 0f) {
+                mover.facing = spawn.facing
+                return
+            }
             lookTimer += delta
-            if (lookTimer >= SENTRY_TURN_TIME) {
+            if (lookTimer >= spawn.turnEvery) {
                 lookTimer = 0f
                 mover.facing = -mover.facing
             }
@@ -262,11 +282,11 @@ class Guard(
     }
 
     companion object {
+        const val REACTION_TIME = 0.6f
         const val PATROL_SPEED = 1.6f
         const val SEARCH_SPEED = 2.6f
         const val CHASE_SPEED = 4.2f
         const val PATROL_PAUSE = 1.5f
-        const val SENTRY_TURN_TIME = 5f
         const val LOOK_AROUND_TIME = 1.3f
         const val SUSPICIOUS_TIME = 4f
         const val SEARCH_TIME = 8f

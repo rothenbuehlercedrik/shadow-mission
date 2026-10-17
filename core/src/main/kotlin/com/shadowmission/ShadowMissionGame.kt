@@ -12,6 +12,7 @@ import com.shadowmission.level.LevelLoader
 import com.shadowmission.level.LevelValidator
 import com.shadowmission.render.MissionScreen
 import com.shadowmission.render.MissionSelectScreen
+import com.shadowmission.render.Sounds
 
 /** Owns the campaign and saved progress, and switches between the menu and missions. */
 open class ShadowMissionGame(private val startMission: Int? = null) : Game() {
@@ -20,10 +21,20 @@ open class ShadowMissionGame(private val startMission: Int? = null) : Game() {
         private set
     lateinit var progress: ProgressStore
         private set
+    lateinit var sounds: Sounds
+        private set
+
+    /** Sound on or off, remembered between sessions. */
+    var soundOn: Boolean
+        get() = Gdx.app.getPreferences(SETTINGS).getBoolean("sound", true)
+        set(value) {
+            Gdx.app.getPreferences(SETTINGS).putBoolean("sound", value).flush()
+        }
 
     override fun create() {
         campaign = Campaign.parse(Gdx.files.internal("levels/campaign.json").readString())
         progress = GdxProgress()
+        sounds = Sounds { soundOn }
         // The Android back button returns to the menu instead of closing the app.
         Gdx.input.setCatchKey(Input.Keys.BACK, true)
         if (startMission != null) play(startMission) else showMenu()
@@ -48,5 +59,10 @@ open class ShadowMissionGame(private val startMission: Int? = null) : Game() {
 
     override fun dispose() {
         screen?.dispose()
+        sounds.dispose()
+    }
+
+    companion object {
+        private const val SETTINGS = "shadow-mission-settings"
     }
 }

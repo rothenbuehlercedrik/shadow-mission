@@ -1,5 +1,6 @@
 {
-  "name": "Harbor Warehouse (test level)",
+  "name": "Harbor Warehouse",
+  "briefing": "Mr. Kessler moves stolen cargo through this warehouse and runs it all from the top-floor office. A bodyguard keeps watch by the door. Get to him without raising the alarm.",
   "floorHeight": 3.2,
   "floors": [
     {

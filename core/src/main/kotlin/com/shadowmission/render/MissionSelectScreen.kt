@@ -40,10 +40,20 @@ class MissionSelectScreen(private val game: ShadowMissionGame) : ScreenAdapter()
         }
     }
 
+    private fun soundButton(): UiButton {
+        val w = 110f * ui
+        val h = 36f * ui
+        return UiButton("sound", if (game.soundOn) "Sound: on" else "Sound: off", viewport.worldWidth - w - 16f * ui, viewport.worldHeight - h - 16f * ui, w, h)
+    }
+
     override fun show() {
         Gdx.input.inputProcessor = object : InputAdapter() {
             override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
                 val y = Gdx.graphics.height - screenY.toFloat()
+                if (soundButton().contains(screenX.toFloat(), y)) {
+                    game.soundOn = !game.soundOn
+                    return true
+                }
                 val index = cards().indexOfFirst { it.contains(screenX.toFloat(), y) }
                 if (index >= 0 && game.campaign.isUnlocked(index, game.progress)) game.play(index)
                 return true
@@ -61,8 +71,10 @@ class MissionSelectScreen(private val game: ShadowMissionGame) : ScreenAdapter()
         val cards = cards()
         val campaign = game.campaign
 
+        val sound = soundButton()
         shapes.projectionMatrix = viewport.camera.combined
         shapes.begin(ShapeRenderer.ShapeType.Filled)
+        Ui.button(shapes, sound)
         cards.forEachIndexed { i, card ->
             val unlocked = campaign.isUnlocked(i, game.progress)
             shapes.color = if (unlocked) Palette.panelLight else Palette.panel
@@ -86,6 +98,10 @@ class MissionSelectScreen(private val game: ShadowMissionGame) : ScreenAdapter()
         font.color = Palette.mutedText
         layout.setText(font, "Choose a contract")
         font.draw(batch, layout, (viewport.worldWidth - layout.width) / 2f, viewport.worldHeight - 82f * ui)
+
+        font.color = Palette.hudText
+        layout.setText(font, sound.label)
+        font.draw(batch, layout, sound.x + (sound.width - layout.width) / 2f, sound.y + (sound.height + layout.height) / 2f)
 
         cards.forEachIndexed { i, card ->
             val unlocked = campaign.isUnlocked(i, game.progress)

@@ -19,6 +19,8 @@ data class Level(
     val coins: Int = 3,
     /** One or two sentences shown before the mission starts. */
     val briefing: String = "",
+    /** Hints shown while the assassin is in a stretch of a floor; used by the tutorial. */
+    val tips: List<Tip> = emptyList(),
 ) {
     val left: Float get() = floors.minOf { it.left }
     val right: Float get() = floors.maxOf { it.right }
@@ -84,7 +86,12 @@ data class GuardSpawn(
     val route: List<Float> = emptyList(),
     /** +1 faces right, -1 faces left. */
     val facing: Int = 1,
+    /** Seconds between a standing guard's turns; 0 means they never turn. */
+    val turnEvery: Float = 5f,
 )
+
+/** A hint shown while the assassin is on [floor] between [fromX] and [toX]. */
+data class Tip(val floor: Int, val fromX: Float, val toX: Float, val text: String)
 
 enum class HidingKind { CLOSET, CURTAIN, DESK }
 

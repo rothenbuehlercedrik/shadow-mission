@@ -58,6 +58,16 @@ class Mission(val level: Level) {
     val coins = mutableListOf<Coin>()
 
     private var noiseTimer = 0f
+    private var stepTimer = 0f
+
+    /** Events since the screen last looked; it plays sounds for them and clears the list. */
+    val events = mutableListOf<GameEvent>()
+
+    fun emit(event: GameEvent) {
+        // Nobody may be listening (tests, screenshots), so keep the backlog small.
+        if (events.size >= 64) events.removeAt(0)
+        events += event
+    }
     private var replanTimer = 0f
 
     /** Plans a route to [target]; returns false when there is no way there. */
@@ -89,6 +99,7 @@ class Mission(val level: Level) {
         if (abs(dx) > abs(reach - assassin.x)) return false
         coinsLeft--
         coins += Coin(Position(assassin.floor, assassin.x), assassin.y + 1.4f, target)
+        emit(GameEvent.COIN_THROWN)
         leaveHiding()
         return true
     }
@@ -120,6 +131,7 @@ class Mission(val level: Level) {
         if (!targetEliminated || a.mover.isOnStairs || a.dragging != null) return
         if (a.floor == level.exit.floor && abs(a.x - level.exit.x) <= EXIT_REACH) {
             status = MissionStatus.COMPLETE
+            emit(GameEvent.COMPLETE)
             assassin.stop()
             order = null
         }
@@ -127,7 +139,10 @@ class Mission(val level: Level) {
 
     /** Opens any door a character walked through. */
     fun walkedThrough(floor: Int, fromX: Float, toX: Float) {
-        building.doorsBetween(floor, fromX, toX).forEach(building::open)
+        building.doorsBetween(floor, fromX, toX).filter { !building.isOpen(it) }.forEach {
+            building.open(it)
+            emit(GameEvent.DOOR_OPENED)
+        }
     }
 
     /** True when [guard] has the assassin in sight. */
@@ -161,6 +176,7 @@ class Mission(val level: Level) {
 
     fun caught() {
         status = MissionStatus.CAUGHT
+        emit(GameEvent.CAUGHT)
         assassin.stop()
         order = null
     }
@@ -199,6 +215,7 @@ class Mission(val level: Level) {
                     // An alarmed guard is ready for it; anyone else, and always the target, goes down.
                     if (g.isTarget || g.state != GuardState.ALARMED) {
                         g.knockOut()
+                        emit(if (g.isTarget) GameEvent.TARGET_DOWN else GameEvent.TAKEDOWN)
                         a.busy = TAKEDOWN_TIME
                         noise(Position(a.floor, a.x), TAKEDOWN_NOISE)
                     }
@@ -217,6 +234,7 @@ class Mission(val level: Level) {
                 if (body.floor == a.floor && abs(body.x - a.x) <= PICKUP_REACH) {
                     body.hiddenIn = null
                     a.dragging = body
+                    emit(GameEvent.BODY_PICKED_UP)
                 }
             }
             is Order.Hide -> if (!a.isMoving) {
@@ -224,11 +242,11 @@ class Mission(val level: Level) {
                 val body = a.dragging
                 if (body != null) {
                     body.hiddenIn = o.spot
+                    emit(GameEvent.BODY_HIDDEN)
                     body.dragTo(o.spot.floor, o.spot.x, level.floorY(o.spot.floor))
                     a.dragging = null
                 } else {
                     a.hiddenIn = o.spot
-                    a.crouching = false
                 }
             }
         }
@@ -244,12 +262,20 @@ class Mission(val level: Level) {
         coins.forEach { coin ->
             val wasFlying = !coin.landed
             coin.age += delta
-            if (wasFlying && coin.landed) noise(coin.to, COIN_NOISE)
+            if (wasFlying && coin.landed) {
+                noise(coin.to, COIN_NOISE)
+                emit(GameEvent.COIN_LANDED)
+            }
         }
         coins.removeAll { it.age > Coin.FLIGHT_TIME + 1.5f }
     }
 
     private fun emitNoise(delta: Float) {
+        stepTimer -= delta
+        if (assassin.isMoving && assassin.busy <= 0f && stepTimer <= 0f && assassin.gait != Gait.CROUCH) {
+            stepTimer = if (assassin.gait == Gait.RUN) 0.28f else 0.5f
+            emit(GameEvent.FOOTSTEP)
+        }
         noiseTimer -= delta
         val radius = assassin.noiseRadius
         if (radius <= 0f || noiseTimer > 0f) return
