@@ -19,6 +19,17 @@ class CameraController(
 
     private var zoomAtPinchStart = 1f
 
+    /** Called for taps that are not part of a pan or pinch; `count` is 2 for a double tap. */
+    var onTap: (screenX: Float, screenY: Float, count: Int) -> Unit = { _, _, _ -> }
+
+    /** While true the camera glides after the assassin; panning by hand turns it off until the next tap. */
+    var following = true
+
+    override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean {
+        onTap(x, y, count)
+        return true
+    }
+
     val scrollInput = object : InputAdapter() {
         override fun scrolled(amountX: Float, amountY: Float): Boolean {
             setZoom(camera.zoom * (1f + amountY * 0.1f))
@@ -27,6 +38,7 @@ class CameraController(
     }
 
     override fun pan(x: Float, y: Float, deltaX: Float, deltaY: Float): Boolean {
+        following = false
         val unitsPerPixel = camera.zoom * camera.viewportWidth / screenWidth()
         camera.position.add(-deltaX * unitsPerPixel, deltaY * unitsPerPixel, 0f)
         clamp()
@@ -47,6 +59,14 @@ class CameraController(
 
     override fun pinchStop() {
         zoomAtPinchStart = camera.zoom
+    }
+
+    fun follow(x: Float, y: Float, delta: Float) {
+        if (!following) return
+        val t = 1f - Math.pow(0.02, delta.toDouble()).toFloat()
+        camera.position.x += (x - camera.position.x) * t
+        camera.position.y += (y - camera.position.y) * t
+        clamp()
     }
 
     fun centreOn(x: Float, y: Float) {

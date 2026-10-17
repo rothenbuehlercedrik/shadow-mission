@@ -6,6 +6,9 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.Matrix4
+import com.shadowmission.game.Gait
+import com.shadowmission.game.Mission
+import com.shadowmission.game.PathStep
 import com.shadowmission.level.Floor
 import com.shadowmission.level.GuardKind
 import com.shadowmission.level.GuardSpawn
@@ -13,10 +16,15 @@ import com.shadowmission.level.Level
 import com.shadowmission.level.Room
 import com.shadowmission.level.Stairs
 
-/** Draws a level with flat placeholder shapes until real sprites arrive. */
-class LevelRenderer(private val level: Level) {
+/** Draws a mission with flat placeholder shapes until real sprites arrive. */
+class LevelRenderer(private val mission: Mission) {
+
+    private val level: Level = mission.level
 
     private val shapes = ShapeRenderer()
+
+    /** Where the player last tapped, and whether that spot was reachable; fades after a moment. */
+    var tapMarker: TapMarker? = null
 
     fun render(projection: Matrix4) {
         shapes.projectionMatrix = projection
@@ -32,7 +40,9 @@ class LevelRenderer(private val level: Level) {
         level.guards.forEach(::drawVisionCone)
         level.guards.forEach(::drawGuard)
         drawTarget()
+        drawPathPreview()
         drawAssassin()
+        drawTapMarker(tapMarker)
         shapes.end()
 
         Gdx.gl.glDisable(GL20.GL_BLEND)
@@ -76,7 +86,14 @@ class LevelRenderer(private val level: Level) {
             } else {
                 shapes.rect(x - WALL / 2f, y + DOOR_HEIGHT, WALL, level.floorHeight - DOOR_HEIGHT)
                 shapes.color = if (door.locked) Palette.doorLocked else Palette.door
-                shapes.rect(x - DOOR_THICKNESS / 2f, y, DOOR_THICKNESS, DOOR_HEIGHT)
+                if (mission.building.isOpen(door)) {
+                    // Swung open: the panel is seen edge-on beside the empty frame.
+                    shapes.rect(x + WALL / 2f, y, DOOR_OPEN_WIDTH, DOOR_HEIGHT)
+                    shapes.color = Palette.doorFrame
+                    shapes.rect(x - WALL / 2f, y + DOOR_HEIGHT - 0.06f, WALL, 0.06f)
+                } else {
+                    shapes.rect(x - DOOR_THICKNESS / 2f, y, DOOR_THICKNESS, DOOR_HEIGHT)
+                }
             }
         }
     }
@@ -112,10 +129,8 @@ class LevelRenderer(private val level: Level) {
         val y = level.floorY(guard.floor) + EYE_HEIGHT
         val room = level.roomAt(guard.floor, guard.x)
         val range = if (room?.dark == true) VISION_RANGE_DARK else VISION_RANGE
-        // Walls and closed doors block sight, so the cone stops at the edge of the guard's room.
-        val wallX = if (guard.facing > 0) room?.right else room?.x
-        val endX = if (wallX == null) guard.x + guard.facing * range
-        else guard.x + guard.facing * minOf(range, kotlin.math.abs(wallX - guard.x) - WALL / 2f)
+        // Walls and closed doors block sight; open doorways let it through.
+        val endX = mission.building.sightEnd(guard.floor, guard.x, guard.facing, range)
         shapes.color = Palette.visionCalm
         shapes.triangle(guard.x, y, endX, y + 0.9f, endX, y - 1.3f)
     }
@@ -141,20 +156,63 @@ class LevelRenderer(private val level: Level) {
     }
 
     private fun drawAssassin() {
-        val x = level.player.x
-        val y = level.floorY(level.player.floor)
+        val a = mission.assassin
+        val height = if (a.gait == Gait.CROUCH) CROUCH_HEIGHT else BODY_HEIGHT
         shapes.color = Palette.assassinOutline
-        shapes.rect(x - 0.27f, y, 0.54f, BODY_HEIGHT + 0.04f)
-        drawPerson(x, y, Palette.assassin)
+        shapes.rect(a.x - 0.27f, a.y, 0.54f, height + 0.04f)
+        drawPerson(a.x, a.y, Palette.assassin, height)
         shapes.color = Palette.scarf
-        shapes.rect(x - 0.25f, y + BODY_HEIGHT - 0.55f, 0.5f, 0.14f)
-        shapes.rect(x - 0.45f, y + BODY_HEIGHT - 0.75f, 0.22f, 0.28f)
+        shapes.rect(a.x - 0.25f, a.y + height - 0.55f, 0.5f, 0.14f)
+        // The scarf tail trails behind the direction of travel.
+        shapes.rect(a.x - a.facing * 0.34f - 0.11f, a.y + height - 0.75f, 0.22f, 0.28f)
     }
 
-    private fun drawPerson(x: Float, y: Float, color: Color) {
+    private fun drawPathPreview() {
+        val a = mission.assassin
+        if (!a.isMoving) return
+        shapes.color = if (a.running) Palette.pathRun else Palette.path
+        var fx = a.x
+        var fy = a.y
+        a.plannedSteps.forEach { step ->
+            val (tx, ty) = when (step) {
+                is PathStep.Walk -> step.toX to level.floorY(step.floor)
+                is PathStep.Climb -> if (step.up) step.stairs.right to level.floorY(step.stairs.topFloor)
+                else step.stairs.x to level.floorY(step.stairs.bottomFloor)
+            }
+            dottedLine(fx, fy + PATH_LIFT, tx, ty + PATH_LIFT)
+            fx = tx
+            fy = ty
+        }
+        shapes.circle(fx, fy + PATH_LIFT, 0.16f, 12)
+    }
+
+    private fun dottedLine(x1: Float, y1: Float, x2: Float, y2: Float) {
+        val length = kotlin.math.hypot(x2 - x1, y2 - y1)
+        val dots = (length / 0.4f).toInt()
+        for (i in 0..dots) {
+            val t = if (dots == 0) 1f else i / dots.toFloat()
+            shapes.circle(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, 0.06f, 6)
+        }
+    }
+
+    private fun drawTapMarker(marker: TapMarker?) {
+        if (marker == null || marker.age > TapMarker.LIFETIME) return
+        val fade = 1f - marker.age / TapMarker.LIFETIME
+        val y = level.floorY(marker.floor) + PATH_LIFT
+        if (marker.reachable) {
+            shapes.color = Palette.path.cpy().also { it.a *= fade }
+            shapes.circle(marker.x, y, 0.3f * (1f + marker.age), 20)
+        } else {
+            shapes.color = Palette.blocked.cpy().also { it.a = fade }
+            shapes.rectLine(marker.x - 0.3f, y - 0.3f, marker.x + 0.3f, y + 0.3f, 0.1f)
+            shapes.rectLine(marker.x - 0.3f, y + 0.3f, marker.x + 0.3f, y - 0.3f, 0.1f)
+        }
+    }
+
+    private fun drawPerson(x: Float, y: Float, color: Color, height: Float = BODY_HEIGHT) {
         shapes.color = color
-        shapes.rect(x - 0.25f, y, 0.5f, BODY_HEIGHT - 0.4f)
-        shapes.circle(x, y + BODY_HEIGHT - 0.2f, 0.2f, 16)
+        shapes.rect(x - 0.25f, y, 0.5f, height - 0.4f)
+        shapes.circle(x, y + height - 0.2f, 0.2f, 16)
     }
 
     fun dispose() = shapes.dispose()
@@ -165,6 +223,9 @@ class LevelRenderer(private val level: Level) {
         const val DOOR_HEIGHT = 2.2f
         const val DOOR_THICKNESS = 0.12f
         const val BODY_HEIGHT = 1.8f
+        const val CROUCH_HEIGHT = 1.2f
+        const val DOOR_OPEN_WIDTH = 0.18f
+        const val PATH_LIFT = 0.15f
         const val EYE_HEIGHT = 1.6f
         const val VISION_RANGE = 7f
         const val VISION_RANGE_DARK = 3.5f
