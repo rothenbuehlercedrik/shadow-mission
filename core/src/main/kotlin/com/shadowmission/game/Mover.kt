@@ -42,6 +42,15 @@ class Mover(private val level: Level, start: Position) {
 
     fun stop() = follow(emptyList())
 
+    /** Puts the character somewhere directly, dropping any plan. Used for dragged bodies. */
+    fun place(floor: Int, x: Float, y: Float) {
+        steps.clear()
+        climbProgress = 0f
+        this.floor = floor
+        this.x = x
+        this.y = y
+    }
+
     /** Advances along the path at [speed]. [onMove] reports each stretch walked along a floor. */
     fun update(delta: Float, speed: Float, onMove: (floor: Int, fromX: Float, toX: Float) -> Unit) {
         var budget = speed * delta

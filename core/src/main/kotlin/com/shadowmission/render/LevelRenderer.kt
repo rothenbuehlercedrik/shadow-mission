@@ -9,9 +9,13 @@ import com.badlogic.gdx.math.Matrix4
 import com.shadowmission.game.Gait
 import com.shadowmission.game.Guard
 import com.shadowmission.game.GuardState
+import com.shadowmission.game.Coin
 import com.shadowmission.game.Mission
+import com.shadowmission.game.Order
 import com.shadowmission.game.PathStep
 import com.shadowmission.level.Floor
+import com.shadowmission.level.HidingKind
+import com.shadowmission.level.HidingSpot
 import com.shadowmission.level.Level
 import com.shadowmission.level.Room
 import com.shadowmission.level.Stairs
@@ -21,7 +25,7 @@ class LevelRenderer(private val mission: Mission) {
 
     private val level: Level = mission.level
 
-    private val shapes = ShapeRenderer()
+    private val shapes = ShapeRenderer().also { it.setAutoShapeType(true) }
 
     /** Where the player last tapped, and whether that spot was reachable; fades after a moment. */
     var tapMarker: TapMarker? = null
@@ -37,12 +41,16 @@ class LevelRenderer(private val mission: Mission) {
         level.floors.forEach(::drawWallsAndDoors)
         drawSlabs()
         drawExit()
-        mission.guards.forEach(::drawVisionCone)
-        mission.guards.forEach(::drawGuard)
+        level.hidingSpots.forEach(::drawHidingSpot)
+        mission.guards.filter { !it.down }.forEach(::drawVisionCone)
+        mission.guards.filter { it.down && it.hiddenIn == null }.forEach(::drawBody)
+        mission.guards.filter { !it.down }.forEach(::drawGuard)
+        drawTakedownMarker()
         drawTarget()
         drawPathPreview()
         drawNoise()
         drawAssassin()
+        drawCoins()
         drawTapMarker(tapMarker)
         shapes.end()
 
@@ -177,14 +185,92 @@ class LevelRenderer(private val mission: Mission) {
 
     private fun drawAssassin() {
         val a = mission.assassin
-        val height = if (a.gait == Gait.CROUCH) CROUCH_HEIGHT else BODY_HEIGHT
-        shapes.color = Palette.assassinOutline
+        val height = if (a.gait == Gait.CROUCH || a.gait == Gait.DRAG) CROUCH_HEIGHT else BODY_HEIGHT
+        // Hidden: only a faint outline shows where the assassin is.
+        val alpha = if (a.hiddenIn != null) 0.3f else 1f
+        shapes.color = Palette.assassinOutline.cpy().also { it.a = alpha }
         shapes.rect(a.x - 0.27f, a.y, 0.54f, height + 0.04f)
-        drawPerson(a.x, a.y, Palette.assassin, height)
-        shapes.color = Palette.scarf
+        drawPerson(a.x, a.y, Palette.assassin.cpy().also { it.a = alpha }, height)
+        shapes.color = Palette.scarf.cpy().also { it.a = alpha }
         shapes.rect(a.x - 0.25f, a.y + height - 0.55f, 0.5f, 0.14f)
         // The scarf tail trails behind the direction of travel.
         shapes.rect(a.x - a.facing * 0.34f - 0.11f, a.y + height - 0.75f, 0.22f, 0.28f)
+    }
+
+    private fun drawHidingSpot(spot: HidingSpot) {
+        val x = spot.x
+        val y = level.floorY(spot.floor)
+        when (spot.kind) {
+            HidingKind.CLOSET -> {
+                shapes.color = Palette.furnitureEdge
+                shapes.rect(x - 0.55f, y, 1.1f, 2.3f)
+                shapes.color = Palette.furniture
+                shapes.rect(x - 0.5f, y, 1.0f, 2.25f)
+                shapes.color = Palette.furnitureEdge
+                shapes.rect(x - 0.02f, y + 0.1f, 0.04f, 2.05f)
+                shapes.rect(x - 0.14f, y + 1.1f, 0.06f, 0.2f)
+                shapes.rect(x + 0.08f, y + 1.1f, 0.06f, 0.2f)
+            }
+            HidingKind.CURTAIN -> {
+                shapes.color = Palette.curtain
+                shapes.rect(x - 0.65f, y + 0.05f, 1.3f, level.floorHeight - 0.45f)
+                shapes.color = Palette.curtainFold
+                for (i in -2..2) shapes.rect(x + i * 0.26f - 0.03f, y + 0.05f, 0.06f, level.floorHeight - 0.45f)
+            }
+            HidingKind.DESK -> {
+                shapes.color = Palette.furnitureEdge
+                shapes.rect(x - 0.8f, y + 0.85f, 1.6f, 0.12f)
+                shapes.rect(x - 0.75f, y, 0.1f, 0.85f)
+                shapes.rect(x + 0.65f, y, 0.1f, 0.85f)
+                shapes.color = Palette.furniture
+                shapes.rect(x - 0.65f, y + 0.3f, 1.3f, 0.55f)
+            }
+        }
+        if (mission.guards.any { it.hiddenIn == spot }) {
+            // A stashed body: a small marker so the player remembers it is taken.
+            shapes.color = Palette.stashed
+            shapes.circle(x, y + 0.15f, 0.08f, 8)
+        }
+    }
+
+    private fun drawBody(guard: Guard) {
+        shapes.color = Palette.guard
+        val dir = if (mission.assassin.dragging === guard) -mission.assassin.facing else guard.facing
+        shapes.rect(guard.x - 0.8f, guard.y, 1.4f, 0.32f)
+        shapes.circle(guard.x + dir * 0.75f, guard.y + 0.18f, 0.18f, 12)
+        if (guard.discovered) {
+            shapes.color = Palette.visionSearching.cpy().also { it.a = 0.9f }
+            shapes.rect(guard.x - 0.05f, guard.y + 0.6f, 0.1f, 0.3f)
+            shapes.rect(guard.x - 0.05f, guard.y + 0.45f, 0.1f, 0.09f)
+        }
+    }
+
+    private fun drawTakedownMarker() {
+        val target = (mission.order as? Order.Takedown)?.guard ?: return
+        shapes.color = Palette.scarf
+        shapes.triangle(target.x - 0.25f, target.y - 0.05f, target.x + 0.25f, target.y - 0.05f, target.x, target.y + 0.25f)
+    }
+
+    private fun drawCoins() {
+        mission.coins.forEach { coin ->
+            val groundY = level.floorY(coin.to.floor) + 0.08f
+            if (!coin.landed) {
+                val t = coin.age / Coin.FLIGHT_TIME
+                val x = coin.from.x + (coin.to.x - coin.from.x) * t
+                val y = coin.fromY + (groundY - coin.fromY) * t + 1.2f * 4f * t * (1f - t)
+                shapes.color = Palette.coin
+                shapes.circle(x, y, 0.1f, 10)
+            } else {
+                shapes.color = Palette.coin
+                shapes.circle(coin.to.x, groundY, 0.1f, 10)
+                val ring = minOf(1f, (coin.age - Coin.FLIGHT_TIME) / 0.6f)
+                shapes.set(ShapeType.Line)
+                shapes.color = Palette.noise.cpy().also { it.a *= 1f - ring }
+                val r = Mission.COIN_NOISE * ring
+                shapes.ellipse(coin.to.x - r, groundY - 0.2f, r * 2f, 0.4f, 32)
+                shapes.set(ShapeType.Filled)
+            }
+        }
     }
 
     private fun drawNoise() {

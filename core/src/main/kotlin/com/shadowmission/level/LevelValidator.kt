@@ -31,6 +31,7 @@ object LevelValidator {
         checkSpawn("player", level.player)
         checkSpawn("target", level.target)
         checkSpawn("exit", level.exit)
+        level.hidingSpots.forEachIndexed { i, spot -> checkSpawn("hiding spot $i", Spawn(spot.floor, spot.x)) }
         level.guards.forEachIndexed { i, guard ->
             checkSpawn("guard $i", Spawn(guard.floor, guard.x))
             guard.route.forEach { x ->

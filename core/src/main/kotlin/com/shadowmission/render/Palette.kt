@@ -26,6 +26,13 @@ object Palette {
     val visionAlarmed: Color = Color.valueOf("e8433a").also { it.a = 0.32f }
     val meterBack: Color = Color.valueOf("000000").also { it.a = 0.5f }
     val noise: Color = Color.valueOf("9fb4ff").also { it.a = 0.5f }
+    val furniture: Color = Color.valueOf("3b2e2a")
+    val furnitureEdge: Color = Color.valueOf("564239")
+    val curtain: Color = Color.valueOf("5a2333")
+    val curtainFold: Color = Color.valueOf("47192a")
+    val stashed: Color = Color.valueOf("8a8f9c")
+    val coin: Color = Color.valueOf("f2c94c")
+    val slowMo: Color = Color.valueOf("3d5afe").also { it.a = 0.10f }
     val target: Color = Color.valueOf("c9a227")
     val targetMarker: Color = Color.valueOf("d7263d")
     val exit: Color = Color.valueOf("3fbf7f")

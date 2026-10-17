@@ -13,6 +13,9 @@ data class Level(
     val guards: List<GuardSpawn>,
     val target: Spawn,
     val exit: Spawn,
+    val hidingSpots: List<HidingSpot> = emptyList(),
+    /** Coins the assassin starts with, for distractions. */
+    val coins: Int = 3,
 ) {
     val left: Float get() = floors.minOf { it.left }
     val right: Float get() = floors.maxOf { it.right }
@@ -78,4 +81,13 @@ data class GuardSpawn(
     val route: List<Float> = emptyList(),
     /** +1 faces right, -1 faces left. */
     val facing: Int = 1,
+)
+
+enum class HidingKind { CLOSET, CURTAIN, DESK }
+
+/** A place to hide in, or to stash a body in. */
+data class HidingSpot(
+    val floor: Int,
+    val x: Float,
+    val kind: HidingKind = HidingKind.CLOSET,
 )

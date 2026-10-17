@@ -33,6 +33,13 @@
   "player": { "floor": 0, "x": 2 },
   "exit": { "floor": 0, "x": 0.8 },
   "target": { "floor": 2, "x": 25 },
+  "hidingSpots": [
+    { "floor": 0, "x": 7.5, "kind": "closet" },
+    { "floor": 0, "x": 16.5, "kind": "desk" },
+    { "floor": 1, "x": 22, "kind": "curtain" },
+    { "floor": 2, "x": 9, "kind": "closet" }
+  ],
+  "coins": 3,
   "guards": [
     { "floor": 0, "x": 22, "kind": "patrol", "route": [19, 29] },
     { "floor": 1, "x": 11, "kind": "patrol", "route": [9, 19], "facing": -1 },

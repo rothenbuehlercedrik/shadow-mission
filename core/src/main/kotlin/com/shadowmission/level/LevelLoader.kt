@@ -19,6 +19,10 @@ object LevelLoader {
             guards = root.get("guards")?.map(::parseGuard) ?: emptyList(),
             target = parseSpawn(root.get("target")),
             exit = parseSpawn(root.get("exit")),
+            hidingSpots = root.get("hidingSpots")?.map {
+                HidingSpot(it.getInt("floor"), it.getFloat("x"), HidingKind.valueOf(it.getString("kind", "closet").uppercase()))
+            } ?: emptyList(),
+            coins = root.getInt("coins", 3),
         )
     }
 

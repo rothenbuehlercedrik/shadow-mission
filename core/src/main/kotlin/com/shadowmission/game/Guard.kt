@@ -2,6 +2,7 @@ package com.shadowmission.game
 
 import com.shadowmission.level.GuardKind
 import com.shadowmission.level.GuardSpawn
+import com.shadowmission.level.HidingSpot
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -36,6 +37,16 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
     var seesAssassin = false
         private set
 
+    /** Knocked out by the assassin: a body that other guards may find. */
+    var down = false
+        private set
+
+    /** Where this body has been stashed, if anywhere. */
+    var hiddenIn: HidingSpot? = null
+
+    /** Another guard already found this body; it raises no new alarm. */
+    var discovered = false
+
     private var routeIndex = 0
     private var waitTimer = 0f
     private var stateTimer = 0f
@@ -51,8 +62,21 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
             GuardState.ALARMED -> CHASE_SPEED
         }
 
+    fun knockOut() {
+        down = true
+        mover.stop()
+        state = GuardState.PATROL
+        awareness = 0f
+        seesAssassin = false
+    }
+
+    /** Moves a dragged body along with the assassin. */
+    fun dragTo(floor: Int, x: Float, y: Float) = mover.place(floor, x, y)
+
     fun update(delta: Float) {
+        if (down) return
         perceive(delta)
+        noticeBodies()
         when (state) {
             GuardState.PATROL -> patrol(delta)
             GuardState.SUSPICIOUS -> investigate(delta, giveUpAfter = SUSPICIOUS_TIME, calmTo = GuardState.PATROL)
@@ -98,11 +122,22 @@ class Guard(val spawn: GuardSpawn, private val mission: Mission) {
         when {
             awareness >= 1f && state != GuardState.ALARMED -> {
                 enter(GuardState.ALARMED)
-                mission.raiseAlarm(this)
+                mission.raiseAlarm(this, Position(mission.assassin.floor, mission.assassin.x))
             }
             seesAssassin && awareness >= SEARCH_LEVEL && state < GuardState.SEARCHING -> enter(GuardState.SEARCHING)
             seesAssassin && state == GuardState.PATROL -> enter(GuardState.SUSPICIOUS)
         }
+    }
+
+    private fun noticeBodies() {
+        if (state == GuardState.ALARMED) return
+        val body = mission.guards.firstOrNull { it.down && !it.discovered && it.hiddenIn == null && mission.assassin.dragging !== it && mission.canSee(this, it.floor, it.x, it.y) }
+            ?: return
+        body.discovered = true
+        enter(GuardState.SEARCHING)
+        awareness = maxOf(awareness, SEARCH_LEVEL)
+        setPointOfInterest(Position(body.floor, body.x))
+        mission.raiseAlarm(this, Position(body.floor, body.x))
     }
 
     private fun setPointOfInterest(at: Position) {
